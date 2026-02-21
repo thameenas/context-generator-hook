@@ -1,3 +1,4 @@
+```markdown
 # Project Context
 
 ## Overview
@@ -7,7 +8,7 @@ This project, `context-generator-hook` (or `ctxgen`), is a Python CLI tool that 
 The system follows a modular, event-driven architecture triggered by Git commit events.
 1.  **CLI-driven**: All interactions are via a `ctxgen` command-line interface.
 2.  **Git Hook Integration**: A `post-commit` Git hook is installed, which asynchronously executes the `ctxgen update` command in the background (`nohup ... &`) to avoid blocking user commits.
-3.  **LLM-Centric Logic**: Gemini AI models are central to generating and incrementally updating the context, utilizing specialized prompts for full generation, incremental updates, chunk summarization, and summary merging.
+3.  **LLM-Centric Logic**: Gemini AI models are central to generating and incrementally updating the context, utilizing specialized prompts for full generation and incremental updates.
 4.  **Graceful Failure**: The `update` command is designed to never crash, logging errors instead, adhering to the principle that Git hooks should not interfere with the user's workflow.
 5.  **State Management**: Project-specific state (context file, logs, configuration, lock file) is managed within a `.context/` directory at the repository root.
 6.  **Concurrency Control**: A PID-based lockfile prevents multiple `ctxgen update` processes from running simultaneously within the same repository.
@@ -32,11 +33,7 @@ The system follows a modular, event-driven architecture triggered by Git commit 
 -   If the diff is empty, the update is skipped.
 -   **Diff Processing Strategy**:
     -   **Small Diffs** (lines <= `max_diff_lines`): An "incremental update" prompt (`incremental_update.txt`) is constructed, including the current `CONTEXT.md`, the full diff, and the commit message. The prompt is sent to Gemini.
-    -   **Large Diffs** (lines > `max_diff_lines`):
-        -   The full diff is parsed into per-file chunks (`{'file': str, 'diff': str, 'status': str}`).
-        -   For each chunk, a "chunk summary" prompt (`chunk_summary.txt`) is sent to Gemini to get a brief summary of the file's impact. Trivial changes are responded with `TRIVIAL`.
-        -   Non-trivial chunk summaries are collected. If all chunks are trivial, the update is skipped.
-        -   All collected summaries are merged with the current `CONTEXT.md` using a "merge summaries" prompt (`merge_summaries.txt`) and sent to Gemini.
+    -   **Large Diffs** (lines > `max_diff_lines`): For large diffs, an incremental update is skipped, and a full context regeneration (Workflow 1) is performed as a fallback to ensure context accuracy and avoid API rate limits from multi-stage processing.
 -   If the LLM's response is `NO_UPDATE` (a sentinel value), the update is skipped.
 -   The LLM's generated content is validated.
 -   If valid, `CONTEXT.md` is overwritten with the updated content.
@@ -68,14 +65,10 @@ The system follows a modular, event-driven architecture triggered by Git commit 
     *   `status: str`: "updated", "skipped", "generated", "error".
     *   `message: str`: Human-readable description of the update outcome.
 3.  **Git Objects (from `gitpython`)**: Internally used `Repo`, `Commit`, `Diff` objects to interact with the Git repository.
-4.  **Diff Chunk (`list[dict]`)**: Used for large diff processing.
-    *   `file: str`: Relative path of the changed file.
-    *   `diff: str`: Unified diff for that specific file.
-    *   `status: str`: "added", "modified", "deleted", "renamed".
-5.  **LLM Prompt Templates (`src/context_hook/prompts/*.txt`)**: Define the structure and rules for LLM interactions.
-6.  **`.context/CONTEXT.md`**: Markdown file, adheres to a strict section-based format (e.g., `# Project Context`, `## Overview`).
-7.  **`.context/.lock`**: Text file containing the PID of the process currently holding the lock.
-8.  **`.context/hook.log`**: Plain text file, line-delimited log entries with format `[ISO-8601 timestamp] [ACTION] [STATUS] message`.
+4.  **LLM Prompt Templates (`src/context_hook/prompts/*.txt`)**: Define the structure and rules for LLM interactions.
+5.  **`.context/CONTEXT.md`**: Markdown file, adheres to a strict section-based format (e.g., `# Project Context`, `## Overview`).
+6.  **`.context/.lock`**: Text file containing the PID of the process currently holding the lock.
+7.  **`.context/hook.log`**: Plain text file, line-delimited log entries with format `[ISO-8601 timestamp] [ACTION] [STATUS] message`.
 
 ## API & Interfaces
 ### CLI Commands (via `ctxgen` entry point):
@@ -99,7 +92,6 @@ The system follows a modular, event-driven architecture triggered by Git commit 
     *   `generate_full_context(config: Config, client: GeminiClient) -> str`: Orchestrates full context generation.
 *   **`context_hook.git`**:
     *   `get_diff() -> str`: Returns the unified diff of the latest commit.
-    *   `get_diff_file_chunks() -> list[dict]`: Returns diffs split by file with status (`{'file': str, 'diff': str, 'status': str}`).
     *   `get_commit_message() -> str`: Returns the commit message of HEAD.
     *   `get_file_tree() -> list[str]`: Returns a sorted list of tracked file paths.
     *   `get_file_contents(paths: list[str], max_total_chars: int) -> dict[str, str]`: Reads file contents up to a total character limit.
@@ -110,7 +102,7 @@ The system follows a modular, event-driven architecture triggered by Git commit 
     *   `log_entry(log_file: Path, action: str, status: str, message: str) -> None`: Appends an entry to the log file.
     *   `trim_log(log_file: Path, max_entries: int) -> None`: Trims the log file to a specified number of entries.
 *   **`context_hook.updater`**:
-    *   `update_context(config: Config, client: GeminiClient) -> UpdateResult`: Orchestrates incremental context updates.
+    *   `update_context(config: Config, client: GeminiClient) -> UpdateResult`: Orchestrates incremental context updates. For large diffs, it now falls back to full context generation rather than chunking and merging.
     *   `_validate_context(content: str) -> bool`: Performs basic structural validation on LLM output (minimum length, header count).
 
 ## Key Components
@@ -121,8 +113,8 @@ The system follows a modular, event-driven architecture triggered by Git commit 
 *   `src/context_hook/git.py`: Encapsulates all interactions with the local Git repository, such as reading diffs, file trees, and file contents.
 *   `src/context_hook/lockfile.py`: Implements a robust PID-based file locking mechanism to prevent race conditions during concurrent updates.
 *   `src/context_hook/logger.py`: Provides simple, file-based logging utilities for tracking hook execution and outcomes.
-*   `src/context_hook/prompts/`: A directory containing various `.txt` files that serve as templates for LLM prompts, guiding the AI's behavior for different tasks (full generation, incremental updates, summarization).
-*   `src/context_hook/updater.py`: Contains the core intelligence for determining update strategy (small vs. large diff), orchestrating LLM calls for incremental updates, diff chunking, and summary merging.
+*   `src/context_hook/prompts/`: A directory containing various `.txt` files that serve as templates for LLM prompts, guiding the AI's behavior for different tasks (full generation, incremental updates). The chunk summary and merge summaries prompts have been removed.
+*   `src/context_hook/updater.py`: Contains the core intelligence for determining update strategy (small vs. large diff). It now orchestrates LLM calls for incremental updates on small diffs and triggers a full regeneration for large diffs, replacing the previous chunking and merging logic.
 
 ## Dependencies & Environment
 ### Python Dependencies (from `pyproject.toml`):
@@ -145,8 +137,9 @@ The system follows a modular, event-driven architecture triggered by Git commit 
 *   **LLM Input Management**:
     *   File contents for full generation are read within a `max_total_chars` budget (default 50,000 characters).
     *   Files are prioritized (`README.md`, `pyproject.toml`, etc.) and shallow files are preferred when reading contents to fit within the token budget.
-    *   Large Git diffs are handled by chunking them per-file, summarizing each chunk with the LLM, and then merging these summaries.
+    *   Large Git diffs now trigger a full context regeneration instead of incremental updates, ensuring comprehensive updates while avoiding token and rate limit issues.
 *   **Error Handling**: The `ctxgen update` command is designed to catch all exceptions and log them to `.context/hook.log` rather than raising them, ensuring the `post-commit` hook never fails the Git operation.
-*   **Prompt Engineering**: Relies heavily on distinct prompt templates (`chunk_summary.txt`, `full_generation.txt`, `incremental_update.txt`, `merge_summaries.txt`) to guide the LLM's output for specific tasks and to enforce the desired output format (e.g., "Respond with ONLY the markdown content. No explanations...").
+*   **Prompt Engineering**: Relies heavily on distinct prompt templates (`full_generation.txt`, `incremental_update.txt`) to guide the LLM's output for specific tasks and to enforce the desired output format (e.g., "Respond with ONLY the markdown content. No explanations...").
 *   **Context Validation**: Basic structural validation (`_validate_context`) is performed on LLM output to ensure it's not empty, too short, or missing fundamental sections before writing to `CONTEXT.md`.
 *   **Ignored Files**: `git.py` explicitly excludes common directories (`.git`, `node_modules`, `venv`, etc.) and binary file extensions from file tree scanning and content reading.
+```
