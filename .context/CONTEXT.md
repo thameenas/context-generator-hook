@@ -35,7 +35,6 @@ The system follows a modular, event-driven architecture triggered by Git commit 
     -   **Large Diffs** (lines > `max_diff_lines`): For large diffs, an incremental update is skipped, and a full context regeneration (Workflow 1) is performed as a fallback to ensure context accuracy and avoid API rate limits from multi-stage processing.
 -   If the LLM's response is `NO_UPDATE` (a sentinel value), the update is skipped.
 -   The LLM's generated content is validated.
--   If valid, `CONTEXT.md` is overwritten with the updated content, ensuring it always ends with a newline character.
 -   A log entry (`action: UPDATE`, `status: updated/skipped/generated/error`, `message`) is appended to `.context/hook.log`, which is then trimmed to `max_log_entries`.
 
 ### 3. Context Regeneration (`ctxgen regenerate`)

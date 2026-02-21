@@ -1,6 +1,6 @@
 """File-based logging for context-hook."""
 
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 
@@ -10,9 +10,9 @@ def log_entry(log_file: Path, action: str, status: str, message: str = "") -> No
     Format: [ISO-8601 timestamp] [ACTION] [STATUS] message
 
     Example:
-        [2026-02-21T12:30:00+00:00] [UPDATE] [SKIPPED] Trivial diff, no update needed
+        [2026-02-21T12:30:00+05:30] [UPDATE] [SKIPPED] Trivial diff, no update needed
     """
-    timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    timestamp = datetime.now().astimezone().isoformat(timespec="seconds")
     entry = f"[{timestamp}] [{action.upper()}] [{status.upper()}]"
     if message:
         entry += f" {message}"
