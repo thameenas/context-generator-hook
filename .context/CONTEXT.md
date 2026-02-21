@@ -66,7 +66,7 @@ The system follows a modular, event-driven architecture triggered by Git commit 
 4.  **LLM Prompt Templates (`src/context_hook/prompts/*.txt`)**: Define the structure and rules for LLM interactions.
 5.  **`.context/CONTEXT.md`**: Markdown file, adheres to a strict section-based format (e.g., `# Project Context`, `## Overview`) and always ends with a newline character.
 6.  **`.context/.lock`**: Text file containing the PID of the process currently holding the lock.
-7.  **`.context/hook.log`**: Plain text file, line-delimited log entries with format `[ISO-8601 timestamp] [ACTION] [STATUS] message`.
+7.  **`.context/hook.log`**: Plain text file, line-delimited log entries. Timestamps are recorded in the system's local timezone with an ISO-8601 offset, following the format `[ISO-8601 timestamp with local timezone offset] [ACTION] [STATUS] message`. 
 
 ## API & Interfaces
 ### CLI Commands (via `ctxgen` entry point):
@@ -136,7 +136,7 @@ The system follows a modular, event-driven architecture triggered by Git commit 
     *   File contents for full generation are read within a `max_total_chars` budget (default 50,000 characters).
     *   Files are prioritized (`README.md`, `pyproject.toml`, etc.) and shallow files are preferred when reading contents to fit within the token budget.
     *   Large Git diffs now trigger a full context regeneration instead of incremental updates, ensuring comprehensive updates while avoiding token and rate limit issues. Changes to files within directories defined in `EXCLUDE_DIRS` are ignored when generating diffs for updates.
-*   **Error Handling**: The `ctxgen update` command is designed to catch all exceptions and log them to `.context/hook.log` rather than raising them, ensuring the `post-commit` hook never fails the Git operation. It also now normalizes LLM output by stripping markdown wrappers and ensures the context file ends with a newline.
+*   **Error Handling**: The `ctxgen update` command is designed to catch all exceptions and log them to `.context/hook.log` rather than raising them, ensuring the `post-commit` hook never fails the Git operation. It also now normalizes LLM output by stripping markdown wrappers and ensures the context file ends with a newline. Log entries now capture timestamps in the system's local timezone for easier debugging.
 *   **Prompt Engineering**: Relies heavily on distinct prompt templates (`full_generation.txt`, `incremental_update.txt`) to guide the LLM's output for specific tasks and to enforce the desired output format (e.g., "Respond with ONLY the markdown content. No explanations..."). The `GeminiClient` now automatically strips common markdown wrappers from LLM responses to ensure clean output.
 *   **Context Validation**: Basic structural validation (`_validate_context`) is performed on LLM output to ensure it's not empty, too short, or missing fundamental sections before writing to `CONTEXT.md`. Output is pre-processed by `GeminiClient` to strip markdown wrappers and ensure a trailing newline.
 *   **Ignored Files**: `git.py` explicitly excludes common directories (`.git`, `node_modules`, `venv`, etc.) and binary file extensions from file tree scanning and content reading.
