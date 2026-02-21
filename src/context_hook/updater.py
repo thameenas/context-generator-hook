@@ -172,6 +172,9 @@ def _validate_context(content: str) -> bool:
     expected_sections = [
         "## Overview",
         "## Architecture",
+        "## Core Workflows",
+        "## Data Models",
+        "## API",
         "## Key Components",
         "## Dependencies",
         "## Development Notes",

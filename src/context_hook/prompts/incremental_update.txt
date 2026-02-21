@@ -4,10 +4,11 @@ Given a git diff and commit message, decide if the context file needs updating.
 RULES:
 - If the change is trivial (typo fix, formatting, comment-only changes, version bumps), respond with exactly: NO_UPDATE
 - Only modify sections that are affected by the changes
-- Keep descriptions concise — 1-2 sentences per component
+- Provide sufficient technical depth (e.g., mention new fields added to models, new endpoints, or state transitions)
+- Keep descriptions clear but detailed enough for an LLM to write code against
 - Add new components only if they are architecturally significant
 - Remove references to deleted files or components
-- Update existing descriptions if behavior changed
+- Update existing descriptions if behavior, API shape, or data models changed
 - Do NOT hallucinate features, files, or relationships not evident in the diff
 - Preserve the existing structure and section order
 - Return the COMPLETE updated context file in markdown format

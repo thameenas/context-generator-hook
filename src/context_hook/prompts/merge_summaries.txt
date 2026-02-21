@@ -5,7 +5,7 @@ current context file. Update the context file to reflect these changes.
 RULES:
 - If ALL summaries are trivial, respond with exactly: NO_UPDATE
 - Only modify sections affected by the changes
-- Keep descriptions concise
+- Keep technical depth intact (preserve info about data models, endpoints, and workflows)
 - Do NOT hallucinate
 - Return the COMPLETE updated context file
 
