@@ -79,7 +79,7 @@ The system follows a modular, event-driven architecture triggered by Git commit 
 
 ### External API:
 *   **Google Gemini API**: Accessed via `google-genai` SDK.
-    *   `GeminiClient.generate(prompt: str) -> str`: Sends a text prompt to the configured Gemini model (`model` and `api_key` are provided during client initialization) and returns the generated text. Handles `GeminiError` for API failures.
+    *   `GeminiClient.generate(prompt: str, max_retries: int = 3) -> str`: Sends a text prompt to the configured Gemini model, returns generated text. Includes retry logic with exponential backoff for `429 RESOURCE_EXHAUSTED` (rate limit) errors. Handles `GeminiError` for API failures.
 
 ### Internal Module Interfaces:
 *   **`context_hook.config`**:
@@ -108,7 +108,7 @@ The system follows a modular, event-driven architecture triggered by Git commit 
 ## Key Components
 *   `src/context_hook/cli.py`: Defines the command-line interface, parsing arguments and coordinating calls to core logic.
 *   `src/context_hook/config.py`: Manages project configuration (defaults, user overrides, API key retrieval, path resolution).
-*   `src/context_hook/gemini.py`: Provides a standardized interface for interacting with the Google Gemini API, including error handling.
+*   `src/context_hook/gemini.py`: Provides a standardized interface for interacting with the Google Gemini API, including error handling and a retry mechanism with exponential backoff for rate limit errors.
 *   `src/context_hook/generator.py`: Implements the logic for generating a complete context file from a full codebase scan.
 *   `src/context_hook/git.py`: Encapsulates all interactions with the local Git repository, such as reading diffs, file trees, and file contents.
 *   `src/context_hook/lockfile.py`: Implements a robust PID-based file locking mechanism to prevent race conditions during concurrent updates.

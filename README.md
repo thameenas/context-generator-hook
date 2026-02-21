@@ -15,7 +15,7 @@ You commit → post-commit hook fires → ctxgen reads the diff
 ```
 
 - **Trivial commits** (typos, formatting) are detected and skipped
-- **Large diffs** overflow the incremental update limits and trigger a full context regeneration, keeping your updates safely within API rate limits
+- **Large diffs** overflow the incremental update limits and trigger a full context regeneration
 - The hook runs in the background — **your commits are never blocked**
 - Failures are logged, never raised
 
