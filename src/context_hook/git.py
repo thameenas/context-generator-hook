@@ -43,18 +43,21 @@ def get_repo() -> Repo:
 def get_diff() -> str:
     """Get the full unified diff of the latest commit (HEAD~1..HEAD).
 
-    If this is the first commit (no parent), uses git show to get the diff.
-    Returns the diff as a string.
+    Excludes the .context/ directory from the diff so changes to the
+    context file itself don't trigger cyclical updates.
     """
     repo = get_repo()
     head = repo.head.commit
 
+    # Pathspecs to include everything but exclude .context
+    pathspecs = ["--", ".", ":(exclude).context"]
+
     if head.parents:
         parent = head.parents[0]
-        return repo.git.diff(parent.hexsha, head.hexsha)
+        return repo.git.diff(parent.hexsha, head.hexsha, *pathspecs)
     else:
-        # First commit — use git show which works in all repos
-        return repo.git.show(head.hexsha, format="", p=True)
+        # First commit — use git show
+        return repo.git.show(head.hexsha, "--format=", *pathspecs)
 
 
 def get_diff_file_chunks() -> list[dict]:

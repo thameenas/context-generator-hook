@@ -41,7 +41,17 @@ class GeminiClient:
                 )
                 if response.text is None:
                     raise GeminiError("Gemini returned an empty response")
-                return response.text.strip()
+                
+                # Clean up markdown code block wrappers if the LLM added them
+                result = response.text.strip()
+                if result.startswith("```markdown"):
+                    result = result[len("```markdown"):].strip()
+                elif result.startswith("```"):
+                    result = result[3:].strip()
+                if result.endswith("```"):
+                    result = result[:-3].strip()
+                    
+                return result
                 
             except APIError as e:
                 # 429 is Resource Exhausted (Rate Limit)

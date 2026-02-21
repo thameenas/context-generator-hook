@@ -79,7 +79,8 @@ def update_context(config: Config, client: GeminiClient) -> UpdateResult:
 
     # 6. Write
     config.ensure_context_dir()
-    config.context_file.write_text(result)
+    # Ensure it ends with a newline
+    config.context_file.write_text(result.strip() + "\n")
 
     return UpdateResult("updated", f"Context updated ({diff_lines} diff lines).")
 
