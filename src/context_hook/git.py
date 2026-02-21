@@ -43,7 +43,7 @@ def get_repo() -> Repo:
 def get_diff() -> str:
     """Get the full unified diff of the latest commit (HEAD~1..HEAD).
 
-    If this is the first commit (no parent), diffs against the empty tree.
+    If this is the first commit (no parent), uses git show to get the diff.
     Returns the diff as a string.
     """
     repo = get_repo()
@@ -53,8 +53,8 @@ def get_diff() -> str:
         parent = head.parents[0]
         return repo.git.diff(parent.hexsha, head.hexsha)
     else:
-        # First commit — diff against empty tree
-        return repo.git.diff(EMPTY_TREE_SHA, head.hexsha)
+        # First commit — use git show which works in all repos
+        return repo.git.show(head.hexsha, format="", p=True)
 
 
 def get_diff_file_chunks() -> list[dict]:
