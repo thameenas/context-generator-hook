@@ -1,6 +1,6 @@
 # context-generator-hook
 
-A git post-commit hook that automatically maintains a living project context file (`.context/CONTEXT.md`) using **Gemini AI**. Designed for solo developers and hobby projects.
+A git post-commit hook that automatically maintains a living project context file (`.context/CONTEXT.md`) using **Gemini**. Designed for solo developers and hobby projects.
 
 ## Why?
 
@@ -19,45 +19,51 @@ You commit → post-commit hook fires → ctxgen reads the diff
 - The hook runs in the background — **your commits are never blocked**
 - Failures are logged, never raised
 
-## Setup
+## Quick start
 
-### 1. Install
+### 1. Install `ctxgen` globally
 
+**With uv (recommended):**
 ```bash
-# Clone the repo
-git clone <repo-url>
-cd context-generator-hook
-
-# Install with uv
-uv sync
+uv tool install git+https://github.com/<your-username>/context-generator-hook.git
 ```
 
-### 2. Set your API key
+**With pipx:**
+```bash
+pipx install git+https://github.com/<your-username>/context-generator-hook.git
+```
 
-Get a free Gemini API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+**From source:**
+```bash
+git clone https://github.com/<your-username>/context-generator-hook.git
+cd context-generator-hook
+uv tool install .
+```
+
+After install, `ctxgen` is available globally — use it in any project.
+
+### 2. Set your Gemini API key
+
+Get a free key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (no credit card required).
 
 ```bash
+# Add to your shell profile (~/.zshrc or ~/.bashrc)
 export GEMINI_API_KEY="your-key-here"
 ```
 
-Add it to your shell profile (`~/.zshrc`, `~/.bashrc`) to persist it.
-
-### 3. Initialize context in your project
+### 3. Set up your project
 
 ```bash
 cd /path/to/your/project
+
+# Generate initial context from your codebase
 ctxgen init
-```
 
-This scans your codebase and generates `.context/CONTEXT.md`.
-
-### 4. Install the git hook
-
-```bash
+# Install the post-commit hook
 ctxgen install-hook
 ```
 
-Done! Every future commit will automatically update your context file.
+That's it! Every future commit will automatically update `.context/CONTEXT.md`. Review the changes and commit them when you're happy.
 
 ## Commands
 
@@ -110,3 +116,12 @@ uv run pytest tests/ -v
 - **Git hooks never block commits** — everything runs in the background
 - **Failures are graceful** — errors are logged, not raised
 - **All AI content is reviewable** — the human commits the context file manually
+
+## Development
+
+```bash
+git clone https://github.com/<your-username>/context-generator-hook.git
+cd context-generator-hook
+uv sync
+uv run pytest tests/ -v   # 35 tests
+```
