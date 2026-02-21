@@ -43,14 +43,17 @@ def get_repo() -> Repo:
 def get_diff() -> str:
     """Get the full unified diff of the latest commit (HEAD~1..HEAD).
 
-    Excludes the .context/ directory from the diff so changes to the
-    context file itself don't trigger cyclical updates.
+    Excludes directories defined in EXCLUDE_DIRS from the diff so changes
+    to things like the context file or build artifacts don't trigger updates.
     """
     repo = get_repo()
     head = repo.head.commit
 
-    # Pathspecs to include everything but exclude .context
-    pathspecs = ["--", ".", ":(exclude).context"]
+    # Pathspecs to include everything but exclude EXCLUDE_DIRS
+    pathspecs = ["--", "."]
+    for ex_dir in EXCLUDE_DIRS:
+        pathspecs.append(f":(exclude){ex_dir}")
+        pathspecs.append(f":(exclude)**/{ex_dir}/**")
 
     if head.parents:
         parent = head.parents[0]
