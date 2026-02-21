@@ -1,2 +1,8 @@
 # Context hook generated files (when running on itself)
 .context/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
