@@ -101,8 +101,8 @@ class TestUpdateContext:
         assert result.status == "skipped"
         mock_client.generate.assert_not_called()
 
-    def test_large_diff_uses_chunking(self, config, mock_client):
-        """Diffs exceeding max_diff_lines should use chunk+merge path."""
+    def test_large_diff_uses_full_generation(self, config, mock_client):
+        """Diffs exceeding max_diff_lines should fallback to full generation."""
         config.ensure_context_dir()
         config.context_file.write_text(VALID_CONTEXT)
         config.max_diff_lines = 5  # Very low threshold
@@ -111,18 +111,14 @@ class TestUpdateContext:
         large_diff = "\n".join([f"+ line {i}" for i in range(100)])
         mock_client.generate.return_value = VALID_CONTEXT
 
-        chunks = [
-            {"file": "a.py", "diff": "+ new code", "status": "modified"},
-            {"file": "b.py", "diff": "+ more code", "status": "added"},
-        ]
-
         with patch("context_hook.updater.get_diff", return_value=large_diff):
             with patch("context_hook.updater.get_commit_message", return_value="big change"):
-                with patch("context_hook.updater.get_diff_file_chunks", return_value=chunks):
+                with patch("context_hook.updater.generate_full_context", return_value=VALID_CONTEXT) as mock_gen:
                     result = update_context(config, mock_client)
 
-        # Should have called generate multiple times (chunk summaries + merge)
-        assert mock_client.generate.call_count >= 2
+        # Should have fallen back to full generation
+        assert result.status == "generated"
+        mock_gen.assert_called_once()
 
 
 class TestValidateContext:

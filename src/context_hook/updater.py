@@ -8,15 +8,12 @@ from context_hook.gemini import GeminiClient, GeminiError
 from context_hook.generator import generate_full_context
 from context_hook.git import (
     get_diff,
-    get_diff_file_chunks,
     get_commit_message,
 )
 
 # Paths to prompt templates (relative to this file)
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 INCREMENTAL_PROMPT = PROMPTS_DIR / "incremental_update.txt"
-CHUNK_PROMPT = PROMPTS_DIR / "chunk_summary.txt"
-MERGE_PROMPT = PROMPTS_DIR / "merge_summaries.txt"
 
 # Sentinel value the LLM returns when the diff is trivial
 NO_UPDATE = "NO_UPDATE"
@@ -64,7 +61,10 @@ def update_context(config: Config, client: GeminiClient) -> UpdateResult:
     if diff_lines <= config.max_diff_lines:
         result = _update_small_diff(client, current_context, diff, commit_message)
     else:
-        result = _update_large_diff(client, current_context, commit_message)
+        # For large diffs, doing multiple LLM calls hits API rate limits.
+        # Since Gemini has a massive context window, it's safer, faster, and
+        # more accurate to just do a full regeneration.
+        return _do_full_generation(config, client)
 
     # 4. Check for NO_UPDATE
     if result.strip() == NO_UPDATE:
@@ -108,49 +108,7 @@ def _update_small_diff(
     return client.generate(prompt)
 
 
-def _update_large_diff(
-    client: GeminiClient,
-    current_context: str,
-    commit_message: str,
-) -> str:
-    """Handle large diffs by chunking per-file, then merging.
 
-    1. Get per-file diff chunks
-    2. Summarize each chunk individually
-    3. Merge all summaries with current context
-    """
-    file_chunks = get_diff_file_chunks()
-
-    if not file_chunks:
-        return NO_UPDATE
-
-    # Step 1: Summarize each file change
-    chunk_template = CHUNK_PROMPT.read_text()
-    summaries = []
-
-    for chunk in file_chunks:
-        prompt = chunk_template.format(
-            file_path=chunk["file"],
-            status=chunk["status"],
-            diff=chunk["diff"],
-        )
-        summary = client.generate(prompt)
-
-        if summary.strip() != "TRIVIAL":
-            summaries.append(f"**{chunk['file']}** ({chunk['status']}): {summary}")
-
-    # If all chunks were trivial, no update needed
-    if not summaries:
-        return NO_UPDATE
-
-    # Step 2: Merge summaries into updated context
-    merge_template = MERGE_PROMPT.read_text()
-    prompt = merge_template.format(
-        commit_message=commit_message,
-        summaries="\n\n".join(summaries),
-        current_context=current_context,
-    )
-    return client.generate(prompt)
 
 
 def _validate_context(content: str) -> bool:

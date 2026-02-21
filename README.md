@@ -1,10 +1,10 @@
 # context-generator-hook
 
-A git post-commit hook that automatically maintains a living project context file (`.context/CONTEXT.md`) using **Gemini**. 
+A git post-commit hook that automatically maintains a living project context file (`.context/CONTEXT.md`) using **Gemini**.
 
 ## Why?
 
-Maintaining a project context file is great for LLM-assisted development — but keeping it up to date is easy to forget. This tool automates it by hooking into your git workflow, so your context file stays current without any extra effort.
+Maintaining a project context file is great for LLM-assisted development - but keeping it up to date is easy to forget. This tool automates it by hooking into your git workflow, so your context file stays current without any extra effort.
 
 ## How it works
 
@@ -15,7 +15,7 @@ You commit → post-commit hook fires → ctxgen reads the diff
 ```
 
 - **Trivial commits** (typos, formatting) are detected and skipped
-- **Large diffs** are chunked per-file and summarized individually before merging
+- **Large diffs** overflow the incremental update limits and trigger a full context regeneration, keeping your updates safely within API rate limits
 - The hook runs in the background — **your commits are never blocked**
 - Failures are logged, never raised
 
