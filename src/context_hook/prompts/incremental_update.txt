@@ -1,0 +1,24 @@
+You maintain a project context file for a software project.
+Given a git diff and commit message, decide if the context file needs updating.
+
+RULES:
+- If the change is trivial (typo fix, formatting, comment-only changes, version bumps), respond with exactly: NO_UPDATE
+- Only modify sections that are affected by the changes
+- Keep descriptions concise — 1-2 sentences per component
+- Add new components only if they are architecturally significant
+- Remove references to deleted files or components
+- Update existing descriptions if behavior changed
+- Do NOT hallucinate features, files, or relationships not evident in the diff
+- Preserve the existing structure and section order
+- Return the COMPLETE updated context file in markdown format
+
+CURRENT CONTEXT FILE:
+{current_context}
+
+COMMIT MESSAGE:
+{commit_message}
+
+GIT DIFF:
+{diff}
+
+IMPORTANT: Respond with ONLY the updated markdown content, or exactly "NO_UPDATE" if no changes are warranted. No explanations, no code fences, no preamble.

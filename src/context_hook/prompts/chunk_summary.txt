@@ -1,0 +1,11 @@
+Summarize the architectural impact of the following file change in 2-3 sentences.
+Focus on: what changed, why it matters, and how it affects the project structure.
+If the change is trivial (formatting, comments), respond with exactly: TRIVIAL
+
+File: {file_path}
+Status: {status}
+
+Diff:
+{diff}
+
+Respond with ONLY the summary or "TRIVIAL". No preamble.

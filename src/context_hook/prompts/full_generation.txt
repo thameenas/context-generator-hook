@@ -1,0 +1,39 @@
+Analyze this codebase and generate a concise project context file.
+This file will be used by LLMs in future interactions to understand the project
+without re-scanning the entire repository.
+
+RULES:
+- Be concise — this is a summary, not documentation
+- Focus on architecture, key components, and how things connect
+- 1-2 sentences per component
+- Do NOT list every file — only architecturally significant ones
+- Do NOT hallucinate features not evident in the code
+- Include tech stack, key dependencies, and their purposes
+
+OUTPUT FORMAT (use exactly these section headers):
+
+# Project Context
+
+## Overview
+One paragraph: what the project does, its purpose, and primary tech stack.
+
+## Architecture
+Key architectural decisions, patterns, module relationships.
+How the components connect. Data flow if relevant.
+
+## Key Components
+Brief description of each major module/component and their responsibilities.
+
+## Dependencies
+Notable external dependencies and their purposes (not every transitive dep).
+
+## Development Notes
+Patterns, conventions, gotchas specific to this project.
+
+FILE TREE:
+{file_tree}
+
+KEY FILE CONTENTS:
+{file_contents}
+
+IMPORTANT: Respond with ONLY the markdown content. No explanations, no code fences, no preamble.
