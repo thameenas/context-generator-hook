@@ -32,7 +32,7 @@ def find_project_root() -> Path:
 class Config:
     """Configuration with sensible defaults. Only GEMINI_API_KEY is required."""
 
-    model: str = "gemini-2.0-flash"
+    model: str = "gemini-2.5-flash"
     max_diff_lines: int = 1500
     max_log_entries: int = 100
     project_root: Path = field(default_factory=find_project_root)
