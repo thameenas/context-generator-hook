@@ -1,6 +1,6 @@
 # context-generator-hook
 
-A git post-commit hook that automatically maintains a living project context file (`.context/CONTEXT.md`) using **Gemini**. Designed for solo developers and hobby projects.
+A git post-commit hook that automatically maintains a living project context file (`.context/CONTEXT.md`) using **Gemini**. 
 
 ## Why?
 
@@ -40,11 +40,11 @@ cd context-generator-hook
 uv tool install .
 ```
 
-After install, `ctxgen` is available globally — use it in any project.
+After install, `ctxgen` is available globally - use it in any project.
 
 ### 2. Set your Gemini API key
 
-Get a free key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (no credit card required).
+Used gemini here assuming that the free version should be enough for this purpose. Get a free key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
 
 ```bash
 # Add to your shell profile (~/.zshrc or ~/.bashrc)
