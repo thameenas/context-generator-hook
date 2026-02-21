@@ -4,7 +4,7 @@ A git post-commit hook that automatically maintains a living project context fil
 
 ## Why?
 
-LLMs waste tokens re-scanning your codebase every session. This tool keeps a lightweight, structured summary updated on every commit — so future LLM interactions have instant context.
+Maintaining a project context file is great for LLM-assisted development — but keeping it up to date is easy to forget. This tool automates it by hooking into your git workflow, so your context file stays current without any extra effort.
 
 ## How it works
 
@@ -25,17 +25,17 @@ You commit → post-commit hook fires → ctxgen reads the diff
 
 **With uv (recommended):**
 ```bash
-uv tool install git+https://github.com/<your-username>/context-generator-hook.git
+uv tool install git+https://github.com/thameenas/context-generator-hook.git
 ```
 
 **With pipx:**
 ```bash
-pipx install git+https://github.com/<your-username>/context-generator-hook.git
+pipx install git+https://github.com/thameenas/context-generator-hook.git
 ```
 
 **From source:**
 ```bash
-git clone https://github.com/<your-username>/context-generator-hook.git
+git clone https://github.com/thameenas/context-generator-hook.git
 cd context-generator-hook
 uv tool install .
 ```
@@ -116,12 +116,3 @@ uv run pytest tests/ -v
 - **Git hooks never block commits** — everything runs in the background
 - **Failures are graceful** — errors are logged, not raised
 - **All AI content is reviewable** — the human commits the context file manually
-
-## Development
-
-```bash
-git clone https://github.com/<your-username>/context-generator-hook.git
-cd context-generator-hook
-uv sync
-uv run pytest tests/ -v   # 35 tests
-```
