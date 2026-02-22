@@ -34,7 +34,7 @@ class Config:
 
     provider: str = "gemini"
     model: str = "gemini-2.5-flash"
-    max_diff_lines: int = 1500
+    max_diff_lines: int = 3000
     max_log_entries: int = 100
     ignore_files: list[str] = field(default_factory=list)
     project_root: Path = field(default_factory=find_project_root)
