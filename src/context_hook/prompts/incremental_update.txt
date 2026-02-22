@@ -3,6 +3,8 @@ Given a git diff and commit message, decide if the context file needs updating.
 
 RULES:
 - If the change is trivial (typo fix, formatting, comment-only changes, version bumps), respond with exactly: NO_UPDATE
+- If its a UI project and for UI enhancements and stlying changes, respond with exactly: NO_UPDATE
+- If there are only styling changes or lint fixes, respond with exactly: NO_UPDATE
 - Only modify sections that are affected by the changes
 - Provide sufficient technical depth (e.g., mention new fields added to models, new endpoints, or state transitions)
 - Keep descriptions clear but detailed enough for an LLM to write code against
