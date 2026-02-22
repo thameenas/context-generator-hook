@@ -52,7 +52,7 @@ The system follows a modular, event-driven architecture triggered by Git commit 
 1.  **`Config` (`src/context_hook/config.py`)**:
     *   `provider: str` (default: `gemini`): The name of the LLM provider to use (e.g., "gemini", "openai").
     *   `model: str` (default: `gemini-2.5-flash`): The specific model name for the chosen provider.
-    *   `max_diff_lines: int` (default: `1500`): Threshold for diff size to trigger chunked processing.
+    *   `max_diff_lines: int` (default: `1500`): Threshold for diff size to trigger a full context regeneration.
     *   `max_log_entries: int` (default: `100`): Maximum entries to retain in `hook.log`.
     *   `project_root: Path`: Absolute path to the Git repository root.
     *   `context_dir: Path` (`.context/`): Directory for generated files.

@@ -1,0 +1,7 @@
+{
+    "provider": "gemini",
+    "model": "gemini-2.5-flash",
+    "ignore_files": [
+        "README.md"
+    ]
+}
