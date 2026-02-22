@@ -1,6 +1,6 @@
 # context-generator-hook
 
-A git post-commit hook that automatically maintains a living project context file (`.context/CONTEXT.md`) using **Gemini**.
+A git post-commit hook that automatically maintains a living project context file (`.context/CONTEXT.md`) using an LLM(defaults to Gemini).
 
 ## Why?
 
@@ -10,7 +10,7 @@ Maintaining a project context file is great for LLM-assisted development - but k
 
 ```
 You commit → post-commit hook fires → ctxgen reads the diff
-→ Gemini decides if the context needs updating → CONTEXT.md is updated
+→ LLM decides if the context needs updating → CONTEXT.md is updated
 → You review and commit the changes (if any)
 ```
 
@@ -42,8 +42,7 @@ uv tool install .
 
 After install, `ctxgen` is available globally - use it in any project.
 
-### 2. Set your Gemini API key
-
+### 2. Set your API key
 Used gemini here assuming that the free version should be enough for this purpose. Get a free key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
 
 ```bash
@@ -76,10 +75,11 @@ That's it! Every future commit will automatically update `.context/CONTEXT.md`. 
 
 ## Configuration (optional)
 
-Create `.context/config.json` in your project to override defaults:
+Create `.context/config.json` in your project to override defaults. (For providers other than gemini, the client will have to be implemented)
 
 ```json
 {
+    "provider": "gemini",
     "model": "gemini-2.5-flash",
     "max_diff_lines": 1500,
     "max_log_entries": 100
@@ -88,8 +88,9 @@ Create `.context/config.json` in your project to override defaults:
 
 | Setting | Default | Description |
 |---|---|---|
-| `model` | `gemini-2.5-flash` | Gemini model to use |
-| `max_diff_lines` | `1500` | Diffs above this are chunked per-file |
+| `provider` | `gemini` | The LLM provider (currently supports `gemini`) |
+| `model` | `gemini-2.5-flash` | The provider-specific model to use |
+| `max_diff_lines` | `1500` | Diffs above this trigger full context regeneration |
 | `max_log_entries` | `100` | Max entries in `.context/hook.log` |
 
 ## Generated files
