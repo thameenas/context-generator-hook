@@ -9,7 +9,7 @@ The system follows a modular, event-driven architecture triggered by Git commit 
 2.  **Git Hook Integration**: A `post-commit` Git hook is installed, which asynchronously executes the `ctxgen update` command in the background (`nohup ... &`) to avoid blocking user commits.
 3.  **LLM-Centric Logic**: A configurable LLM provider (e.g., Gemini AI) is central to generating and incrementally updating the context, utilizing specialized prompts for full generation and incremental updates. The system uses an abstract `LLMProvider` interface to allow easy switching between different LLM services.
 4.  **Graceful Failure**: The `update` command is designed to never crash, logging errors instead, adhering to the principle that Git hooks should not interfere with the user's workflow.
-5.  **State Management**: Project-specific state (context file, logs, configuration, lock file) is managed within a `.context/` directory at the repository root. Changes within this directory are ignored when determining if a context update is needed.
+5.  **State Management**: Project-specific state (context file, logs, configuration, lock file) is managed within a `.context/` directory at the repository root. Changes within this directory, as well as files explicitly configured in `ignore_files`, are ignored when determining if a context update is needed.
 6.  **Concurrency Control**: A PID-based lockfile prevents multiple `ctxgen update` processes from running simultaneously within the same repository.
 
 ## Core Workflows
@@ -28,7 +28,8 @@ The system follows a modular, event-driven architecture triggered by Git commit 
 -   A `git post-commit` hook (created by `ctxgen install-hook`) triggers `ctxgen update` asynchronously in the background.
 -   A process-level lock is attempted via `.context/.lock`. If another `ctxgen update` is active or a stale lock is found, the update is skipped or the lock is acquired after cleanup.
 -   The current `CONTEXT.md` is read. If missing or empty, a full generation (Workflow 1) is performed as a fallback.
--   The `git diff` for the latest commit and the `commit message` are retrieved. Changes within directories defined in `EXCLUDE_DIRS` (including `.context/`) are explicitly excluded from this diff to prevent cyclical updates.
+-   **Get Diff**: The exact `git diff` for the latest commit is retrieved, explicitly excluding changes within directories defined in `EXCLUDE_DIRS` (including `.context/`) and files/patterns specified in `config.ignore_files`.
+-   The `commit message` is also retrieved.
 -   If the diff is empty, the update is skipped.
 -   **Diff Processing Strategy**:
     -   **Small Diffs** (lines <= `max_diff_lines`): An "incremental update" prompt (`incremental_update.txt`) is constructed, including the current `CONTEXT.md`, the full diff, and the commit message. The prompt is sent to the configured LLM provider.
@@ -54,13 +55,14 @@ The system follows a modular, event-driven architecture triggered by Git commit 
     *   `model: str` (default: `gemini-2.5-flash`): The specific model name for the chosen provider.
     *   `max_diff_lines: int` (default: `1500`): Threshold for diff size to trigger a full context regeneration.
     *   `max_log_entries: int` (default: `100`): Maximum entries to retain in `hook.log`.
+    *   `ignore_files: list[str]` (default: `[]`): A list of glob patterns or file paths to be ignored when generating the git diff for context updates. Changes to these files will not trigger an incremental context update.
     *   `project_root: Path`: Absolute path to the Git repository root.
     *   `context_dir: Path` (`.context/`): Directory for generated files.
     *   `context_file: Path` (`.context/CONTEXT.md`): The main context output.
     *   `config_file: Path` (`.context/config.json`): User-overridable configuration.
     *   `lock_file: Path` (`.context/.lock`): PID-based concurrency lock.
     *   `log_file: Path` (`.context/hook.log`): Operational log.
-    *   **Loading**: Static method `Config.load()` finds `project_root` via `gitpython`, then loads overrides from `config_file`.
+    *   **Loading**: Static method `Config.load()` finds `project_root` via `gitpython`, then loads overrides from `config_file`, including `ignore_files` if present.
     *   **API Key**: `get_api_key()` retrieves the API key from `LLM_API_KEY` environment variable first, then falls back to provider-specific environment variables (e.g., `GEMINI_API_KEY`). Raises `RuntimeError` if not set for the configured provider.
 2.  **`UpdateResult` (`src/context_hook/updater.py`)**:
     *   `status: str`: "updated", "skipped", "generated", "error".
@@ -71,7 +73,7 @@ The system follows a modular, event-driven architecture triggered by Git commit 
 6.  **LLM Prompt Templates (`src/context_hook/prompts/*.txt`)**: Define the structure and rules for LLM interactions.
 7.  **`.context/CONTEXT.md`**: Markdown file, adheres to a strict section-based format (e.g., `# Project Context`) and always ends with a newline character.
 8.  **`.context/.lock`**: Text file containing the PID of the process currently holding the lock.
-9.  **`.context/hook.log`**: Plain text file, line-delimited log entries. Timestamps are recorded in the system's local timezone with an ISO-8601 offset, following the format `[ISO-8601 timestamp with local timezone offset] [ACTION] [STATUS] message`. 
+9.  **`.context/hook.log`**: Plain text file, line-delimited log entries. Timestamps are recorded in the system's local timezone with an ISO-8601 offset, following the format `[ISO-8601 timestamp with local timezone offset] [ACTION] [STATUS] message`.
 
 ## API & Interfaces
 ### CLI Commands (via `ctxgen` entry point):
@@ -86,7 +88,7 @@ The system follows a modular, event-driven architecture triggered by Git commit 
 
 ### Internal Module Interfaces:
 *   **`context_hook.config`**:
-    *   `Config.load() -> Config`: Factory method to load configuration, including the `provider` field.
+    *   `Config.load() -> Config`: Factory method to load configuration, including the `provider` and `ignore_files` fields.
     *   `Config.get_api_key() -> str`: Retrieves API key from `LLM_API_KEY` or provider-specific env var.
     *   `Config.ensure_context_dir() -> None`: Creates the `.context/` directory.
 *   **`context_hook.gemini`**:
@@ -94,7 +96,7 @@ The system follows a modular, event-driven architecture triggered by Git commit 
 *   **`context_hook.generator`**:
     *   `generate_full_context(config: Config, provider: LLMProvider) -> str`: Orchestrates full context generation using the abstract `LLMProvider` interface.
 *   **`context_hook.git`**:
-    *   `get_diff() -> str`: Returns the unified diff of the latest commit, explicitly excluding changes within directories defined in `EXCLUDE_DIRS`.
+    *   `get_diff(config: Config | None = None) -> str`: Returns the unified diff of the latest commit. It now accepts an optional `Config` object to apply `ignore_files` in addition to `EXCLUDE_DIRS` when filtering the diff.
     *   `get_commit_message() -> str`: Returns the commit message of HEAD.
     *   `get_file_tree() -> list[str]`: Returns a sorted list of tracked file paths.
     *   `get_file_contents(paths: list[str], max_total_chars: int) -> dict[str, str]`: Reads file contents up to a total character limit.
@@ -109,22 +111,22 @@ The system follows a modular, event-driven architecture triggered by Git commit 
     *   `log_entry(log_file: Path, action: str, status: str, message: str) -> None`: Appends an entry to the log file.
     *   `trim_log(log_file: Path, max_entries: int) -> None`: Trims the log file to a specified number of entries.
 *   **`context_hook.updater`**:
-    *   `update_context(config: Config, provider: LLMProvider) -> UpdateResult`: Orchestrates incremental context updates, now using the `LLMProvider` interface. For large diffs, it still falls back to full context generation.
+    *   `update_context(config: Config, provider: LLMProvider) -> UpdateResult`: Orchestrates incremental context updates, now using the `LLMProvider` interface. It passes the `config` object to `get_diff` to apply file exclusions. For large diffs, it still falls back to full context generation.
     *   `_do_full_generation(config: Config, provider: LLMProvider) -> UpdateResult`: Helper for full generation, now using `LLMProvider` and ensuring trailing newline.
     *   `_update_small_diff(provider: LLMProvider, ...) -> str`: Helper for small diff updates, now using `LLMProvider`.
     *   `_validate_context(content: str) -> bool`: Performs basic structural validation on LLM output (minimum length, header count).
 
 ## Key Components
 *   `src/context_hook/cli.py`: Defines the command-line interface, parsing arguments and coordinating calls to core logic, now utilizing the `LLMProvider` factory.
-*   `src/context_hook/config.py`: Manages project configuration (defaults, user overrides, API key retrieval for different providers, path resolution). Now includes a `provider` field to select the LLM backend.
+*   `src/context_hook/config.py`: Manages project configuration (defaults, user overrides, API key retrieval for different providers, path resolution). Now includes a `provider` field to select the LLM backend and an `ignore_files` list to control which files are excluded from diff calculations for updates.
 *   `src/context_hook/gemini.py`: Provides a standardized interface for interacting with the Google Gemini API. It now implements the `LLMProvider` abstract interface, including error handling, retry logic, and post-processes LLM responses to strip markdown code block wrappers.
 *   `src/context_hook/generator.py`: Implements the logic for generating a complete context file from a full codebase scan, now using the generic `LLMProvider` interface.
-*   `src/context_hook/git.py`: Encapsulates all interactions with the local Git repository, such as reading diffs (now explicitly excluding changes within `EXCLUDE_DIRS`), file trees, and file contents.
+*   `src/context_hook/git.py`: Encapsulates all interactions with the local Git repository, such as reading diffs, file trees, and file contents. The `get_diff` function now accepts a `Config` object to apply `EXCLUDE_DIRS` and dynamically configured `ignore_files` for more precise diff generation.
 *   `src/context_hook/llm.py`: Defines the abstract `LLMProvider` interface and a factory function (`get_provider`) for obtaining the correct LLM client implementation based on configuration. It also defines `LLMError` as a base exception. This module is key to the pluggable LLM architecture.
 *   `src/context_hook/lockfile.py`: Implements a robust PID-based file locking mechanism to prevent race conditions during concurrent updates.
 *   `src/context_hook/logger.py`: Provides simple, file-based logging utilities for tracking hook execution and outcomes.
 *   `src/context_hook/prompts/`: A directory containing various `.txt` files that serve as templates for LLM prompts, guiding the AI's behavior for different tasks (full generation, incremental updates). The chunk summary and merge summaries prompts have been removed.
-*   `src/context_hook/updater.py`: Contains the core intelligence for determining update strategy (small vs. large diff). It now orchestrates LLM calls using the `LLMProvider` interface for incremental updates on small diffs and triggers a full regeneration for large diffs. It ensures the final `CONTEXT.md` is written ending with a newline character.
+*   `src/context_hook/updater.py`: Contains the core intelligence for determining update strategy (small vs. large diff). It now orchestrates LLM calls using the `LLMProvider` interface for incremental updates on small diffs and triggers a full regeneration for large diffs. It passes the `config` object to `git.get_diff()` to ensure ignored files are properly excluded from the diff. It ensures the final `CONTEXT.md` is written ending with a newline character.
 
 ## Dependencies & Environment
 ### Python Dependencies (from `pyproject.toml`):
@@ -139,7 +141,7 @@ The system follows a modular, event-driven architecture triggered by Git commit 
 *   `GEMINI_API_KEY`: Required environment variable containing the Google Gemini API key if `provider` is set to `gemini` and `LLM_API_KEY` is not set. The `Config.get_api_key()` method checks for these.
 
 ### Configuration Files:
-*   `.context/config.json`: An optional JSON file within the project's `.context/` directory for overriding default settings (e.g., `provider`, `model`, `max_diff_lines`, `max_log_entries`).
+*   `.context/config.json`: An optional JSON file within the project's `.context/` directory for overriding default settings (e.g., `provider`, `model`, `max_diff_lines`, `max_log_entries`, `ignore_files`). The `ignore_files` field can be a list of strings (glob patterns or file paths) to exclude from diff processing.
 
 ## Development Notes
 *   **Python Version**: Requires Python 3.11 or higher.
@@ -148,8 +150,8 @@ The system follows a modular, event-driven architecture triggered by Git commit 
 *   **LLM Input Management**:
     *   File contents for full generation are read within a `max_total_chars` budget (default 50,000 characters).
     *   Files are prioritized (`README.md`, `pyproject.toml`, etc.) and shallow files are preferred when reading contents to fit within the token budget.
-    *   Large Git diffs now trigger a full context regeneration instead of incremental updates, ensuring comprehensive updates while avoiding token and rate limit issues. Changes to files within directories defined in `EXCLUDE_DIRS` are ignored when generating diffs for updates.
+    *   Large Git diffs now trigger a full context regeneration instead of incremental updates, ensuring comprehensive updates while avoiding token and rate limit issues. Changes to files within directories defined in `EXCLUDE_DIRS` and specified in `config.ignore_files` are ignored when generating diffs for updates, ensuring only relevant code changes trigger context updates.
 *   **Error Handling**: The `ctxgen update` command is designed to catch all exceptions and log them to `.context/hook.log` rather than raising them, ensuring the `post-commit` hook never fails the Git operation. It now handles `LLMError` for API failures. It also normalizes LLM output by ensuring the context file ends with a newline and `LLMProvider` implementations (like `GeminiClient`) strip markdown wrappers. Log entries now capture timestamps in the system's local timezone for easier debugging.
 *   **Prompt Engineering**: Relies heavily on distinct prompt templates (`full_generation.txt`, `incremental_update.txt`) to guide the LLM's output for specific tasks and to enforce the desired output format (e.g., "Respond with ONLY the markdown content. No explanations..."). The `LLMProvider` implementations are expected to automatically strip common markdown wrappers from LLM responses to ensure clean output.
 *   **Context Validation**: Basic structural validation (`_validate_context`) is performed on LLM output to ensure it's not empty, too short, or missing fundamental sections before writing to `CONTEXT.md`. Output is pre-processed by the `LLMProvider` implementations to strip markdown wrappers and ensures a trailing newline.
-*   **Ignored Files**: `git.py` explicitly excludes common directories (`.git`, `node_modules`, `venv`, etc.) and binary file extensions from file tree scanning and content reading.
+*   **Ignored Files**: `git.py` explicitly excludes common directories (`.git`, `node_modules`, `venv`, etc.) and binary file extensions from file tree scanning and content reading. It now also respects the `ignore_files` list configured in `.context/config.json` when generating diffs.
