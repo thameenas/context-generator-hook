@@ -73,6 +73,8 @@ That's it! Every future commit will automatically update `.context/CONTEXT.md`. 
 | `ctxgen regenerate` | Rebuild context from scratch |
 | `ctxgen install-hook` | Install post-commit hook into `.git/hooks/` |
 
+
+
 ## Configuration (optional)
 
 Create `.context/config.json` in your project to override defaults. (For providers other than gemini, the client will have to be implemented)
@@ -82,7 +84,8 @@ Create `.context/config.json` in your project to override defaults. (For provide
     "provider": "gemini",
     "model": "gemini-2.5-flash",
     "max_diff_lines": 1500,
-    "max_log_entries": 100
+    "max_log_entries": 100,
+    "ignore_files": ["README.md"]
 }
 ```
 
@@ -92,6 +95,7 @@ Create `.context/config.json` in your project to override defaults. (For provide
 | `model` | `gemini-2.5-flash` | The provider-specific model to use |
 | `max_diff_lines` | `1500` | Diffs above this trigger full context regeneration |
 | `max_log_entries` | `100` | Max entries in `.context/hook.log` |
+| `ignore_files` | `[]` | List of files to ignore during context updates (e.g. `["README.md"]`) |
 
 ## Generated files
 
