@@ -83,7 +83,7 @@ Create `.context/config.json` in your project to override defaults. (For provide
 {
     "provider": "gemini",
     "model": "gemini-2.5-flash",
-    "max_diff_lines": 1500,
+    "max_diff_lines": 3000,
     "max_log_entries": 100,
     "ignore_files": ["README.md"]
 }

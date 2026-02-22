@@ -34,7 +34,7 @@ The system follows a modular, event-driven architecture triggered by Git commit 
 -   **Diff Processing Strategy**:
     -   **Small Diffs** (lines <= `max_diff_lines`): An "incremental update" prompt (`incremental_update.txt`) is constructed, including the current `CONTEXT.md`, the full diff, and the commit message. The prompt is sent to the configured LLM provider.
     -   **Large Diffs** (lines > `max_diff_lines`): For large diffs, an incremental update is skipped, and a full context regeneration (Workflow 1) is performed as a fallback to ensure context accuracy and avoid API rate limits from multi-stage processing.
--   If the LLM's response is `NO_UPDATE` (a sentinel value), the update is skipped.
+-   If the LLM's response is `NO_UPDATE` (a sentinel value), which occurs for trivial changes (e.g., typo fixes, formatting, comment-only changes, version bumps), UI enhancements/styling, or lint fixes, the update is skipped.
 -   The LLM's generated content is validated and ensures a trailing newline before writing to the file.
 -   A log entry (`action: UPDATE`, `status: updated/skipped/generated/error`, `message`) is appended to `.context/hook.log`, which is then trimmed to `max_log_entries`.
 
@@ -53,7 +53,7 @@ The system follows a modular, event-driven architecture triggered by Git commit 
 1.  **`Config` (`src/context_hook/config.py`)**:
     *   `provider: str` (default: `gemini`): The name of the LLM provider to use (e.g., "gemini", "openai").
     *   `model: str` (default: `gemini-2.5-flash`): The specific model name for the chosen provider.
-    *   `max_diff_lines: int` (default: `1500`): Threshold for diff size to trigger a full context regeneration.
+    *   `max_diff_lines: int` (default: `3000`): Threshold for diff size to trigger a full context regeneration.
     *   `max_log_entries: int` (default: `100`): Maximum entries to retain in `hook.log`.
     *   `ignore_files: list[str]` (default: `[]`): A list of glob patterns or file paths to be ignored when generating the git diff for context updates. Changes to these files will not trigger an incremental context update.
     *   `project_root: Path`: Absolute path to the Git repository root.
