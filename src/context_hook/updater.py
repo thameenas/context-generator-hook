@@ -52,8 +52,8 @@ def update_context(config: Config, provider: LLMProvider) -> UpdateResult:
     if not current_context.strip():
         return _do_full_generation(config, provider)
 
-    # 2. Get diff and commit message
-    diff = get_diff()
+    # 1. Get exact diff of what just changed (excluding ignored dirs/files)
+    diff = get_diff(config)
     commit_message = get_commit_message()
 
     if not diff.strip():

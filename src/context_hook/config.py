@@ -36,6 +36,7 @@ class Config:
     model: str = "gemini-2.5-flash"
     max_diff_lines: int = 1500
     max_log_entries: int = 100
+    ignore_files: list[str] = field(default_factory=list)
     project_root: Path = field(default_factory=find_project_root)
 
     @property
@@ -75,6 +76,8 @@ class Config:
                     config.max_diff_lines = data["max_diff_lines"]
                 if "max_log_entries" in data:
                     config.max_log_entries = data["max_log_entries"]
+                if "ignore_files" in data and isinstance(data["ignore_files"], list):
+                    config.ignore_files = data["ignore_files"]
             except (json.JSONDecodeError, OSError):
                 pass  # Ignore malformed config, use defaults
 

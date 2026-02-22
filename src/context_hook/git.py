@@ -40,20 +40,26 @@ def get_repo() -> Repo:
     return Repo(Path.cwd(), search_parent_directories=True)
 
 
-def get_diff() -> str:
+def get_diff(config=None) -> str:
     """Get the full unified diff of the latest commit (HEAD~1..HEAD).
 
     Excludes directories defined in EXCLUDE_DIRS from the diff so changes
     to things like the context file or build artifacts don't trigger updates.
+    Also excludes files globally configured in config.ignore_files.
     """
     repo = get_repo()
     head = repo.head.commit
 
-    # Pathspecs to include everything but exclude EXCLUDE_DIRS
+    # Pathspecs to include everything but exclude EXCLUDE_DIRS and ignored_files
     pathspecs = ["--", "."]
     for ex_dir in EXCLUDE_DIRS:
         pathspecs.append(f":(exclude){ex_dir}")
         pathspecs.append(f":(exclude)**/{ex_dir}/**")
+        
+    if config and config.ignore_files:
+        for ignored_file in config.ignore_files:
+            pathspecs.append(f":(exclude){ignored_file}")
+            pathspecs.append(f":(exclude)**/{ignored_file}")
 
     if head.parents:
         parent = head.parents[0]
