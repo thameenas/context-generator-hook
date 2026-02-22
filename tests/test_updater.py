@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from context_hook.config import Config
-from context_hook.gemini import GeminiClient
+from context_hook.llm import LLMProvider
 from context_hook.updater import (
     update_context,
     _validate_context,
@@ -22,8 +22,8 @@ def config(tmp_path):
 
 @pytest.fixture
 def mock_client():
-    """Create a mock Gemini client."""
-    return MagicMock(spec=GeminiClient)
+    """Create a mock LLM client."""
+    return MagicMock(spec=LLMProvider)
 
 
 VALID_CONTEXT = """# Project Context

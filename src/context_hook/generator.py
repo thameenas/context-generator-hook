@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from context_hook.config import Config
-from context_hook.gemini import GeminiClient, GeminiError
+from context_hook.llm import LLMProvider, LLMError
 from context_hook.git import (
     get_file_tree,
     get_file_contents,
@@ -15,26 +15,27 @@ from context_hook.git import (
 PROMPT_FILE = Path(__file__).parent / "prompts" / "full_generation.txt"
 
 
-def generate_full_context(config: Config, client: GeminiClient) -> str:
-    """Generate complete CONTEXT.md by scanning the codebase.
+def generate_full_context(config: Config, provider: LLMProvider) -> str:
+    """Scan the codebase and generate a full context document.
 
     Flow:
     1. Get tracked file tree from git
     2. Prioritize files (README, configs, entry points first)
     3. Read file contents within character budget
     4. Format the full generation prompt
-    5. Call Gemini to generate context
+    5. Call LLM to generate context
     6. Validate and return
 
     Args:
         config: Project configuration.
-        client: Initialized Gemini client.
+        provider: The LLM provider (e.g., GeminiClient).
 
     Returns:
-        Generated context markdown string.
+        The generated markdown content for CONTEXT.md.
 
     Raises:
-        GeminiError: If the LLM call fails.
+        RuntimeError: If too many files or prompt building fails.
+        LLMError: If the LLM API call fails.
     """
     # 1. Get file tree
     file_tree = get_file_tree()
@@ -59,11 +60,16 @@ def generate_full_context(config: Config, client: GeminiClient) -> str:
     )
 
     # 5. Call LLM
-    result = client.generate(prompt)
+    try:
+        print("Starting LLM generation...", flush=True)
+        result = provider.generate(prompt)
+        print("LLM generation complete.", flush=True)
+    except Exception as e:
+        raise LLMError(f"Failed to generate full context: {e}") from e
 
     # 6. Basic validation
     if not result or len(result.strip()) < 50:
-        raise GeminiError("Generated context is too short — likely an error.")
+        raise LLMError("Generated context is too short — likely an error.")
 
     return result
 

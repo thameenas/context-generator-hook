@@ -4,13 +4,15 @@ import time
 from google import genai
 from google.genai.errors import APIError
 
+from context_hook.llm import LLMProvider, LLMError
 
-class GeminiError(Exception):
+
+class GeminiError(LLMError):
     """Raised when a Gemini API call fails."""
     pass
 
 
-class GeminiClient:
+class GeminiClient(LLMProvider):
     """Wrapper around the Google GenAI SDK for Gemini API calls."""
 
     def __init__(self, api_key: str, model: str = "gemini-2.5-flash"):
@@ -59,6 +61,7 @@ class GeminiClient:
                     retries += 1
                     # Exponential backoff: 15s, 30s, 60s
                     delay = base_delay * (2 ** (retries - 1))
+                    print(f"Rate limited (429). Retrying in {delay} seconds (Attempt {retries}/{max_retries})...", flush=True)
                     time.sleep(delay)
                     continue
                 raise GeminiError(f"Gemini API call failed: {e}") from e

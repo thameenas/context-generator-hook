@@ -4,7 +4,7 @@ import sys
 import click
 
 from context_hook.config import Config
-from context_hook.gemini import GeminiClient, GeminiError
+from context_hook.llm import get_provider, LLMError
 from context_hook.lockfile import acquire_lock, LockError
 from context_hook.logger import log_entry, trim_log
 
@@ -35,19 +35,16 @@ def init():
             click.echo("Aborted.")
             return
 
-    # Get API key
     try:
-        api_key = config.get_api_key()
+        provider = get_provider(config)
     except RuntimeError as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
-    client = GeminiClient(api_key=api_key, model=config.model)
-
     click.echo("Scanning codebase...")
     try:
-        result = generate_full_context(config, client)
-    except (GeminiError, RuntimeError) as e:
+        result = generate_full_context(config, provider)
+    except (LLMError, RuntimeError) as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -67,11 +64,10 @@ def update():
 
     try:
         config = Config.load()
-        api_key = config.get_api_key()
-        client = GeminiClient(api_key=api_key, model=config.model)
+        provider = get_provider(config)
 
         with acquire_lock(config.lock_file):
-            result = update_context(config, client)
+            result = update_context(config, provider)
 
         log_entry(config.log_file, "UPDATE", result.status, result.message)
         trim_log(config.log_file, config.max_log_entries)
@@ -113,17 +109,15 @@ def regenerate():
             return
 
     try:
-        api_key = config.get_api_key()
+        provider = get_provider(config)
     except RuntimeError as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
-    client = GeminiClient(api_key=api_key, model=config.model)
-
     click.echo("Scanning codebase...")
     try:
-        result = generate_full_context(config, client)
-    except (GeminiError, RuntimeError) as e:
+        result = generate_full_context(config, provider)
+    except (LLMError, RuntimeError) as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 

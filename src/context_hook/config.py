@@ -30,8 +30,9 @@ def find_project_root() -> Path:
 
 @dataclass
 class Config:
-    """Configuration with sensible defaults. Only GEMINI_API_KEY is required."""
+    """Configuration with sensible defaults."""
 
+    provider: str = "gemini"
     model: str = "gemini-2.5-flash"
     max_diff_lines: int = 1500
     max_log_entries: int = 100
@@ -66,6 +67,8 @@ class Config:
             try:
                 with open(config.config_file) as f:
                     data = json.load(f)
+                if "provider" in data:
+                    config.provider = data["provider"]
                 if "model" in data:
                     config.model = data["model"]
                 if "max_diff_lines" in data:
@@ -78,14 +81,24 @@ class Config:
         return config
 
     def get_api_key(self) -> str:
-        """Get Gemini API key from GEMINI_API_KEY environment variable."""
-        key = os.environ.get("GEMINI_API_KEY")
-        if not key:
+        """Get API key from LLM_API_KEY or provider-specific environment variables."""
+        # Check generic key first
+        key = os.environ.get("LLM_API_KEY")
+        if key:
+            return key
+            
+        # Fallback to provider-specific key
+        if self.provider == "gemini":
+            key = os.environ.get("GEMINI_API_KEY")
+            if key:
+                return key
             raise RuntimeError(
-                "GEMINI_API_KEY environment variable not set.\n"
-                "Get a free API key at: https://aistudio.google.com/apikey"
+                "GEMINI_API_KEY or LLM_API_KEY environment variable not set.\n"
+                "Get a free Gemini API key at: https://aistudio.google.com/apikey"
             )
-        return key
+            
+        raise RuntimeError(f"LLM_API_KEY environment variable not set for provider '{self.provider}'.")
+
 
     def ensure_context_dir(self) -> None:
         """Create .context/ directory if it doesn't exist."""

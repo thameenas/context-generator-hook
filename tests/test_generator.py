@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from context_hook.config import Config
-from context_hook.gemini import GeminiClient, GeminiError
+from context_hook.llm import LLMProvider, LLMError
 from context_hook.generator import generate_full_context
 
 
@@ -36,7 +36,7 @@ def config(tmp_path):
 
 @pytest.fixture
 def mock_client():
-    client = MagicMock(spec=GeminiClient)
+    client = MagicMock(spec=LLMProvider)
     client.generate.return_value = VALID_CONTEXT
     return client
 
@@ -60,7 +60,7 @@ class TestGenerateFullContext:
 
         with patch("context_hook.generator.get_file_tree", return_value=["main.py"]):
             with patch("context_hook.generator.get_file_contents", return_value={"main.py": "code"}):
-                with pytest.raises(GeminiError, match="too short"):
+                with pytest.raises(LLMError, match="too short"):
                     generate_full_context(config, mock_client)
 
     def test_prompt_includes_file_tree(self, config, mock_client):

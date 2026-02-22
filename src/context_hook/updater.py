@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from context_hook.config import Config
-from context_hook.gemini import GeminiClient, GeminiError
+from context_hook.llm import LLMProvider
 from context_hook.generator import generate_full_context
 from context_hook.git import (
     get_diff,
@@ -26,8 +26,12 @@ class UpdateResult:
     message: str   # Human-readable description
 
 
-def update_context(config: Config, client: GeminiClient) -> UpdateResult:
-    """Main update orchestration — called on every commit.
+def update_context(config: Config, provider: LLMProvider) -> UpdateResult:
+    """Update context based on the latest commit.
+
+    Args:
+        config: Project configuration.
+        provider: The LLM provider.
 
     Flow:
     1. Read current CONTEXT.md (if missing, do full generation instead)
@@ -42,11 +46,11 @@ def update_context(config: Config, client: GeminiClient) -> UpdateResult:
     """
     # 1. Read current context (or generate if missing)
     if not config.context_file.exists():
-        return _do_full_generation(config, client)
+        return _do_full_generation(config, provider)
 
     current_context = config.context_file.read_text()
     if not current_context.strip():
-        return _do_full_generation(config, client)
+        return _do_full_generation(config, provider)
 
     # 2. Get diff and commit message
     diff = get_diff()
@@ -59,12 +63,19 @@ def update_context(config: Config, client: GeminiClient) -> UpdateResult:
     diff_lines = diff.count("\n")
 
     if diff_lines <= config.max_diff_lines:
-        result = _update_small_diff(client, current_context, diff, commit_message)
+        result = _update_small_diff(provider, current_context, diff, commit_message)
     else:
         # For large diffs, doing multiple LLM calls hits API rate limits.
         # Since Gemini has a massive context window, it's safer, faster, and
         # more accurate to just do a full regeneration.
-        return _do_full_generation(config, client)
+        result = generate_full_context(config, provider)
+        
+        # Ensure the generated content ends with a newline
+        if result and not result.endswith('\n'):
+            result += '\n'
+            
+        config.context_file.write_text(result)
+        return UpdateResult("generated", "Diff was large; full context regenerated.")
 
     # 4. Check for NO_UPDATE
     if result.strip() == NO_UPDATE:
@@ -85,16 +96,21 @@ def update_context(config: Config, client: GeminiClient) -> UpdateResult:
     return UpdateResult("updated", f"Context updated ({diff_lines} diff lines).")
 
 
-def _do_full_generation(config: Config, client: GeminiClient) -> UpdateResult:
+def _do_full_generation(config: Config, provider: LLMProvider) -> UpdateResult:
     """Fallback: generate context from scratch when CONTEXT.md is missing."""
-    result = generate_full_context(config, client)
+    result = generate_full_context(config, provider)
     config.ensure_context_dir()
+    
+    # Ensure the generated content ends with a newline
+    if result and not result.endswith('\n'):
+        result += '\n'
+        
     config.context_file.write_text(result)
-    return UpdateResult("generated", "No existing context — generated from full scan.")
+    return UpdateResult("generated", "Generated initial context file.")
 
 
 def _update_small_diff(
-    client: GeminiClient,
+    provider: LLMProvider,
     current_context: str,
     diff: str,
     commit_message: str,
@@ -106,10 +122,7 @@ def _update_small_diff(
         diff=diff,
         commit_message=commit_message,
     )
-    return client.generate(prompt)
-
-
-
+    return provider.generate(prompt)
 
 
 def _validate_context(content: str) -> bool:
