@@ -33,11 +33,12 @@ class Config:
     """Configuration with sensible defaults."""
 
     provider: str = "gemini"
-    model: str = "gemini-2.5-flash"
+    model: str | None = None
     max_diff_lines: int = 3000
     max_log_entries: int = 100
     ignore_files: list[str] = field(default_factory=list)
     project_root: Path = field(default_factory=find_project_root)
+    base_url: str | None = None
 
     @property
     def context_dir(self) -> Path:
@@ -78,6 +79,8 @@ class Config:
                     config.max_log_entries = data["max_log_entries"]
                 if "ignore_files" in data and isinstance(data["ignore_files"], list):
                     config.ignore_files = data["ignore_files"]
+                if "base_url" in data:
+                    config.base_url = data["base_url"]
             except (json.JSONDecodeError, OSError):
                 pass  # Ignore malformed config, use defaults
 
@@ -99,7 +102,15 @@ class Config:
                 "GEMINI_API_KEY or LLM_API_KEY environment variable not set.\n"
                 "Get a free Gemini API key at: https://aistudio.google.com/apikey"
             )
-            
+        elif self.provider == "openai":
+            key = os.environ.get("OPENAI_API_KEY")
+            if key:
+                return key
+            raise RuntimeError(
+                "OPENAI_API_KEY environment variable not set.\n"
+                "For OpenRouter, set OPENAI_API_KEY to your sk-or-... key."
+            )
+
         raise RuntimeError(f"LLM_API_KEY environment variable not set for provider '{self.provider}'.")
 
 
