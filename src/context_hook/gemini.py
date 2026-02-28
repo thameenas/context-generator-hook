@@ -6,6 +6,8 @@ from google.genai.errors import APIError
 
 from context_hook.llm import LLMProvider, LLMError
 
+GEMINI_DEFAULT_MODEL = "gemini-2.5-flash"
+
 
 class GeminiError(LLMError):
     """Raised when a Gemini API call fails."""
